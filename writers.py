@@ -39,7 +39,6 @@ def write_movie_avg_ratings():
             avg_rating_writer.writerow([movie_index, round(avg_rating, 5)])
 
 
-
 def write_k_neighbour():
     movie_avg_ratings_data = util.import_data('resources/movie_avg_rating.csv', ';')
     ratings_data = util.import_data('resources/ratings.csv', ';')
@@ -48,7 +47,7 @@ def write_k_neighbour():
     with open('resources/k_neighbours.csv', 'a', newline='') as k_neighbours_file:
         k_neighbours_writer = csv.writer(k_neighbours_file, delimiter=';')
         # for i in range(1562, movies_len+1):
-        for i in range(123, 123 + 1):
+        for i in range(1601, 2200):
             movie_x_and_k_neighbours = util.find_k_neighbours(
                 x_movie_index=i,
                 movies_len=movies_len,
@@ -57,8 +56,8 @@ def write_k_neighbour():
                 similarity_threshold=0.5,
                 k=10,
             )
-            # k_neighbours_writer.writerow(movie_x_and_k_neighbours)
-            print(movie_x_and_k_neighbours)
+            k_neighbours_writer.writerow(movie_x_and_k_neighbours)
+            print(i)
 
 
 write_k_neighbour()
