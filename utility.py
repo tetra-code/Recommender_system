@@ -127,5 +127,7 @@ def find_k_neighbours(
             result.append(y_movie_index)
             if len(result) == k:
                 return result
+
+    # k not 10 but no more to search
     return result
 

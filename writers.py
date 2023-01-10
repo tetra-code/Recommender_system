@@ -47,7 +47,7 @@ def write_k_neighbour():
     with open('resources/k_neighbours.csv', 'a', newline='') as k_neighbours_file:
         k_neighbours_writer = csv.writer(k_neighbours_file, delimiter=';')
         # for i in range(1562, movies_len+1):
-        for i in range(1601, 2200):
+        for i in range(2200, movies_len+1):
             movie_x_and_k_neighbours = util.find_k_neighbours(
                 x_movie_index=i,
                 movies_len=movies_len,
