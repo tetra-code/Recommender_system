@@ -97,7 +97,7 @@ def find_k_neighbours(
             y_movie_avg_rating,
         )
 
-        # merge and get common users data frame with columns user_idx, rating_x, rating_y
+        # merge and g22et common users data frame with columns user_idx, rating_x, rating_y
         common_users = pd.merge(df_users_movie_x_minus_avg_rating, df_users_movie_y_minus_avg_rating, on="user_idx")
         similarity_value = pearson_correlation_coefficient(common_users)
         if similarity_value >= similarity_threshold:
