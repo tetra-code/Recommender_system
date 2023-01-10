@@ -34,8 +34,6 @@ def pearson_correlation_coefficient(
     denominator_rhs = common_users['rating_y'].apply(lambda y: np.power(y, 2)).sum()
     numerator = (common_users['rating_x'] * common_users['rating_y']).sum()
     denominator = np.sqrt(denominator_lhs) * np.sqrt(denominator_rhs)
-    if denominator == 0.0:
-        return 0.0
     return numerator / denominator
 
 
@@ -82,13 +80,20 @@ def find_k_neighbours(
     r = list(range(1, movies_len+1))
     random.shuffle(r)
     for i in r:
-        if (attempts == 300):
-            return result
-        attempts += 1
         y_movie_index = i
         if y_movie_index == x_movie_index:
             continue
         y_movie_avg_rating = float(movie_avg_ratings_data[y_movie_index - 1][1])
+
+        print("x index")
+        print(x_movie_index)
+        print("x avg")
+        print(x_movie_avg_rating)
+
+        print("y index")
+        print(y_movie_index)
+        print("y avg")
+        print(y_movie_avg_rating)
 
         # already minus the avg rating for convenience when pearson coefficient calculation
         df_users_movie_y_minus_avg_rating = find_users_rated_movie_min_avg(
@@ -105,3 +110,4 @@ def find_k_neighbours(
             if len(result) == k:
                 return result
     return result
+
