@@ -1,7 +1,8 @@
-import csv
+from surprise import Dataset, SVD, Reader
+from surprise.model_selection import cross_validate, GridSearchCV, train_test_split
 
 import numpy as np
-
+import pandas as pd
 import utility
 
 
@@ -62,36 +63,101 @@ def find_latent_factors(
     return ratings_matrix
 
 
-def main():
-    # they are all initially strings
-    movie_data = utility.import_data('resources/movies.csv', ';')
-    users_data = utility.import_data('resources/users.csv', ';')
-    ratings_data = utility.import_data('resources/ratings.csv', ';')
-    prediction_data = utility.import_data('resources/predictions.csv', ';')
-
-    # 3.58131
-    global_avg_rating = utility.all_movies_average_rating(ratings_data)
-
-    # TODO: create bias matrix that needs to be updated at each gradient descent?
-    # baseline bias = global avg rating + user x deviation + movie i deviation
-    # bxi = u + bx + bi
-
-    # find ratings matrix using SVP and stochastic gradient descent
-    # ratings data has dummy column and dummy row since user and movie indices start at 1
-    ratings_matrix = find_latent_factors(
-        num_users=6040,
-        num_user_factors=3,
-        num_movies=3706,
-        num_movie_factors=2,
-        alpha=0.3,
-        epochs=300,
-        ratings_data=ratings_data,
+def get_ratings_data(ratings_data):
+    reader = Reader(rating_scale=(1, 5))
+    return Dataset.load_from_df(
+        ratings_data[['user_idx', 'movie_idx', 'rating']],
+        reader,
     )
 
-    # prediction
-    for row in prediction_data:
-        user_idx = int(row[0])
-        movie_idx = int(row[1])
 
-        # remove 1 for each index since index in csv is 1-based
-        pred_rating = ratings_matrix[user_idx][movie_idx]
+"""
+Use grid search cross-validation for hyperparamter tuning, gets the best number of 
+factors and number of epochs to choose from
+"""
+def grid_search_cross_vali_svd(data):
+    # List of n factors and epochs to choose from
+    param_grid = {
+        'n_factors': [20, 50, 100],
+        'n_epochs': [5, 10, 20],
+    }
+    gs = GridSearchCV(SVD, param_grid, measures=['RMSE', 'MAE'], cv=10)
+    gs.fit(data)
+    print(gs.best_score['rmse'])
+    print(gs.best_params['rmse'])
+
+    # best hyper-parameters
+    best_factor = gs.best_params['rmse']['n_factors']
+    best_epoch = gs.best_params['rmse']['n_epochs']
+
+    svd = SVD(n_factors=best_factor, n_epochs=best_epoch)
+    return svd
+
+
+def train(svd, data):
+    # Train the algorithm on the trainset
+    trainset, _ = train_test_split(data, test_size=.20)
+    svd.fit(trainset)
+
+    # Run 10-fold cross-validation and print results
+    results = cross_validate(svd, data, measures=["RMSE", "MAE"], cv=10)
+    print(results)
+
+
+"""
+# define which user ID that we want to give recommendation
+userID = 23
+# define how many top-n movies that we want to recommend
+n_items = 10
+# generate recommendation using the model that we have trained
+generate_recommendation(svd, userID, ratings_data, movies_data, n_items)
+"""
+def predict_rating(model, user_id, ratings_df, movies_df, n_items):
+    # Get a list of all movie IDs from dataset
+    movie_ids = ratings_df["movieId"].unique()
+
+    # Get a list of all movie IDs that have been watched by user
+    movie_ids_user = ratings_df.loc[ratings_df["userId"] == user_id, "movieId"]
+    # Get a list off all movie IDS that that have not been watched by user
+    movie_ids_to_pred = np.setdiff1d(movie_ids, movie_ids_user)
+
+    # Apply a rating of 4 to all interactions (only to match the Surprise dataset format)
+    test_set = [[user_id, movie_id, 4] for movie_id in movie_ids_to_pred]
+
+    # Predict the ratings and generate recommendations
+    predictions = model.test(test_set)
+    pred_ratings = np.array([pred.est for pred in predictions])
+    print("Top {0} item recommendations for user {1}:".format(n_items, user_id))
+    # Rank top-n movies based on the predicted ratings
+    index_max = (-pred_ratings).argsort()[:n_items]
+    for i in index_max:
+        movie_id = movie_ids_to_pred[i]
+        print(movies_df[movies_df["movieId"] == movie_id]["title"].values[0], pred_ratings[i])
+
+
+def main():
+    # they are all initially strings
+
+    ratings_data = pd.read_csv(
+        'resources/ratings.csv',
+        sep=';',
+        names=['user_idx', 'movie_idx', 'rating'],
+    )
+    user_metadata = pd.read_csv(
+        'resources/users.csv',
+        sep=';',
+        names=['user_idx', 'sex', 'age', 'profession'],
+    )
+
+    data = get_ratings_data(ratings_data)
+    svd_model = grid_search_cross_vali_svd(data)
+    train(svd_model, data)
+
+    # Apply a rating of 4 to all interactions (only to match the Surprise dataset format)
+    prediction_data = utility.import_data('resources/predictions.csv', ';')
+    test_set = [[ int(row[0]), int(row[1]), 0 ] for row in prediction_data]
+    predictions = svd_model.test(test_set)
+    pred_ratings = np.array([pred.est for pred in predictions])
+
+
+train()
