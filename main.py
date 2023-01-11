@@ -1,6 +1,6 @@
 import csv
 
-from surprise import Dataset, SVD, Reader
+from surprise import Dataset, SVD, Reader, SVDpp
 from surprise.model_selection import cross_validate, GridSearchCV, train_test_split
 
 import numpy as np
@@ -81,10 +81,10 @@ def grid_search_cross_vali_svd(data):
     # List of n factors and epochs to choose from
     print("Starting grid search")
     param_grid = {
-        'n_factors': [3, 5, 10, 20, 30, 50],
-        'n_epochs': [100, 150, 200, 300],
+        'n_factors': [3, 10, 20, 30, 40, 50],
+        'n_epochs': [100, 150],
     }
-    gs = GridSearchCV(SVD, param_grid, measures=['RMSE', 'MAE'], cv=10)
+    gs = GridSearchCV(SVDpp, param_grid, measures=['RMSE', 'MAE'], cv=10)
     gs.fit(data)
     print(gs.best_score['rmse'])
     print(gs.best_params['rmse'])
@@ -93,7 +93,7 @@ def grid_search_cross_vali_svd(data):
     best_factor = gs.best_params['rmse']['n_factors']
     best_epoch = gs.best_params['rmse']['n_epochs']
 
-    svd = SVD(n_factors=best_factor, n_epochs=best_epoch)
+    svd = SVDpp(n_factors=best_factor, n_epochs=best_epoch)
     return svd
 
 
@@ -138,6 +138,7 @@ def main():
     with open('resources/submission.csv', 'a', newline='') as submission_file:
         submission_writer = csv.writer(submission_file, delimiter=',')
         for i, pred_rating in enumerate(pred_ratings):
+            print(i+1)
             submission_writer.writerow([i+1, pred_rating])
 
 
