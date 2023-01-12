@@ -1,7 +1,7 @@
 import csv
 
 from surprise import Dataset, SVD, Reader, SVDpp
-from surprise.model_selection import cross_validate, GridSearchCV, train_test_split
+from surprise.model_selection import cross_validate, GridSearchCV, train_test_split, RandomizedSearchCV
 
 import numpy as np
 import pandas as pd
@@ -81,10 +81,10 @@ def grid_search_cross_vali_svd(data):
     # List of n factors and epochs to choose from
     print("Starting grid search")
     param_grid = {
-        'n_factors': [20, 50, 100],
-        'n_epochs': [10, 20, 50],
+        'n_factors': [10, 20, 30],
+        'n_epochs': [30, 50],
     }
-    gs = GridSearchCV(SVDpp, param_grid, measures=['RMSE', 'MAE'], cv=10)
+    gs = GridSearchCV(SVD, param_grid, measures=['RMSE', 'MAE'], cv=5, joblib_verbose=2)
     gs.fit(data)
     print(gs.best_score['rmse'])
     print(gs.best_params['rmse'])
@@ -93,7 +93,30 @@ def grid_search_cross_vali_svd(data):
     best_factor = gs.best_params['rmse']['n_factors']
     best_epoch = gs.best_params['rmse']['n_epochs']
 
-    return SVD(n_factors=best_factor, n_epochs=best_epoch)
+    return SVD(n_factors=best_factor, n_epochs=best_epoch, biased=True)
+
+
+"""
+Use grid search cross-validation for hyperparamter tuning, gets the best number of 
+factors and number of epochs to choose from
+"""
+def rand_search_cross_vali_svd(data):
+    # List of n factors and epochs to choose from
+    print("Starting grid search")
+    param_grid = {
+        'n_factors': [10, 20, 30],
+        'n_epochs': [30, 50],
+    }
+    rs = RandomizedSearchCV(SVD, param_grid, measures=['RMSE', 'MAE'], cv=5, n_iter=5, joblib_verbose=2, random_state=42)
+    rs.fit(data)
+    print(rs.best_score['rmse'])
+    print(rs.best_params['rmse'])
+
+    # best hyper-parameters
+    best_factor = rs.best_params['rmse']['n_factors']
+    best_epoch = rs.best_params['rmse']['n_epochs']
+
+    return SVD(n_factors=best_factor, n_epochs=best_epoch, biased=True)
 
 
 def train_and_validate(svd, data) -> bool:
@@ -119,7 +142,7 @@ def main():
     )
 
     data = get_ratings_data(ratings_data)
-    svd_model = grid_search_cross_vali_svd(data)
+    svd_model = rand_search_cross_vali_svd(data)
     # svd_model = SVD(n_factors=10, n_epochs=100, biased=True)
     print('training')
     if not train_and_validate(svd_model, data):
