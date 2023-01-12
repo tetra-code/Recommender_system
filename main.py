@@ -1,4 +1,5 @@
 import csv
+import pickle
 
 from surprise import Dataset, SVD, Reader, SVDpp, CoClustering, BaselineOnly, KNNWithZScore, SlopeOne, NMF, \
     NormalPredictor, KNNBasic, KNNWithMeans, KNNBaseline
@@ -105,11 +106,11 @@ def search_cross_vali_svd(search, data):
 
 def train_and_validate(algo, data) -> bool:
     # Train the algorithm on the training set
-    train_set, _ = train_test_split(data, test_size=.2)
+    train_set, _ = train_test_split(data, test_size=0.0001)
     algo.fit(train_set)
     print('training done')
     # Run 5-fold cross-validation and print results
-    scores = cross_validate(algo, data, measures=["RMSE", "MAE"], cv=5)
+    scores = cross_validate(algo, data, n_jobs=-2, measures=["RMSE", "MAE"], cv=5)
     for score in scores['test_rmse']:
         print(score)
         if score > 0.88:
@@ -118,33 +119,44 @@ def train_and_validate(algo, data) -> bool:
 
 
 def main():
-    # they are all initially strings
-    ratings_data = pd.read_csv(
-        'resources/ratings.csv',
-        sep=';',
-        names=['user_idx', 'movie_idx', 'rating'],
-    )
-    data = get_ratings_data(ratings_data)
-
-    # so far best is n_factors=10, n_epochs=100, lr_all=0.003, reg_all=0.03,
-    param_grid = {
-        'n_factors': [3, 10, 20],
-        'n_epochs': [50, 100],
-        "lr_all": [0.002, 0.003, 0.005, 0.006, 0.007],
-        "reg_all": [0.01, 0.02, 0.03, 0.4, 0.5]
-    }
-    rs = RandomizedSearchCV(SVD, param_grid, measures=['RMSE', 'MAE'], cv=5, refit=True, joblib_verbose=2, random_state=42)
-    svd_model = search_cross_vali_svd(rs, data)
-
-    # train
-    print('training')
-    if not train_and_validate(svd_model, data):
-        print("not good enough")
-        return
-
     # Apply a rating of 0 to all interactions (only to match the Surprise dataset format)
     prediction_data = utility.import_data('resources/predictions.csv', ';')
-    test_set = [[ int(row[0]), int(row[1]), 0 ] for i, row in enumerate(prediction_data)]
+    test_set = [[int(row[0]), int(row[1]), 0] for i, row in enumerate(prediction_data)]
+
+    try:
+        load_filename = 'models/finalized_model.sva'
+        with open(load_filename, 'rb') as f:
+            svd_model = pickle.load(f)
+    except Exception as e:
+        # they are all initially strings
+        ratings_data = pd.read_csv(
+            'resources/ratings.csv',
+            sep=';',
+            names=['user_idx', 'movie_idx', 'rating'],
+        )
+        data = get_ratings_data(ratings_data)
+
+        # so far best is n_factors=10, n_epochs=100, lr_all=0.003, reg_all=0.03,
+        param_grid = {
+            'n_factors': [3, 10, 20],
+            'n_epochs': [50, 100],
+            "lr_all": [0.002, 0.003, 0.005, 0.006, 0.007],
+            "reg_all": [0.01, 0.02, 0.03, 0.4, 0.5]
+        }
+        rs = RandomizedSearchCV(SVD, param_grid, measures=['RMSE', 'MAE'], n_jobs=-2, cv=10, refit=True, joblib_verbose=2, random_state=42)
+        # svd_model = search_cross_vali_svd(rs, data)
+        svd_model = SVDpp(
+            n_factors=10,
+            n_epochs=100,
+            lr_all=0.007,
+            reg_all=0.03,
+            cache_ratings=True,
+        )
+        # train
+        print('training')
+        if not train_and_validate(svd_model, data):
+            print("not good enough")
+            return
 
     # list of Prediction instance
     predictions = svd_model.test(test_set)
@@ -160,6 +172,11 @@ def main():
         for i, pred_rating in enumerate(pred_ratings):
             submission_writer.writerow([i+1, pred_rating])
     print('Finished')
+
+    # save model
+    save_filename = 'models/finalized_model.sav'
+    with open(save_filename, 'wb') as f:
+        pickle.dump(svd_model, f)
 
 
 main()
