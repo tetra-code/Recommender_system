@@ -56,7 +56,3 @@ def write_k_neighbour():
                 k=10,
             )
             k_neighbours_writer.writerow(movie_x_and_k_neighbours)
-            print(i)
-
-
-write_k_neighbour()
