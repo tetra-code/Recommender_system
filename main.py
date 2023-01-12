@@ -68,8 +68,6 @@ def find_best_algo(data):
     benchmark = []
     for algorithm in [SVD(), SlopeOne(), NMF(), NormalPredictor(), KNNBaseline(), KNNBasic(), KNNWithMeans(),
                       KNNWithZScore(), BaselineOnly(), CoClustering()]:
-        print(algorithm)
-
         # Perform cross validation
         results = cross_validate(algorithm, data, measures=['RMSE'], cv=3, verbose=False)
 
@@ -110,12 +108,12 @@ def train_and_validate(algo, data) -> bool:
     train_set, _ = train_test_split(data, test_size=.2)
     algo.fit(train_set)
     print('training done')
-    # # Run 5-fold cross-validation and print results
-    # scores = cross_validate(algo, data, measures=["RMSE", "MAE"], cv=5)
-    # for score in scores['test_rmse']:
-    #     print(score)
-    #     if score > 0.88:
-    #         return False
+    # Run 5-fold cross-validation and print results
+    scores = cross_validate(algo, data, measures=["RMSE", "MAE"], cv=5)
+    for score in scores['test_rmse']:
+        print(score)
+        if score > 0.88:
+            return False
     return True
 
 
