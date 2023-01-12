@@ -105,7 +105,7 @@ def rand_search_cross_vali_svd(data):
     print("Starting grid search")
     param_grid = {
         'n_factors': [10, 20, 30],
-        'n_epochs': [30, 50],
+        'n_epochs': [50, 100],
     }
     rs = RandomizedSearchCV(SVD, param_grid, measures=['RMSE', 'MAE'], cv=5, n_iter=5, joblib_verbose=2, random_state=42)
     rs.fit(data)
@@ -120,8 +120,9 @@ def rand_search_cross_vali_svd(data):
 
 
 def train_and_validate(svd, data) -> bool:
-    # Train the algorithm on the trainset
-    svd.fit(data)
+    # Train the algorithm on the training set
+    train_set, _ = train_test_split(data, test_size=.20)
+    svd.fit(train_set)
     print('training done')
 
     # Run 10-fold cross-validation and print results
@@ -160,7 +161,7 @@ def main():
     pred_ratings = np.array([int(round(pred.est)) for pred in predictions])
 
     # write the predictions in submission file
-    with open('resources/submission.csv', 'a', newline='') as submission_file:
+    with open('resources/submission.csv', 'w', newline='') as submission_file:
         submission_writer = csv.writer(submission_file, delimiter=',')
         for i, pred_rating in enumerate(pred_ratings):
             print(i+1)
