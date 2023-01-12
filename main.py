@@ -97,14 +97,18 @@ def grid_search_cross_vali_svd(data):
     return svd
 
 
-def train(svd, data):
+def train_and_validate(svd, data) -> bool:
     # Train the algorithm on the trainset
-    trainset, _ = train_test_split(data, test_size=.20)
-    svd.fit(trainset)
+    svd.fit(data)
+    print('training done')
 
     # Run 10-fold cross-validation and print results
-    results = cross_validate(svd, data, measures=["RMSE", "MAE"], cv=10)
-    print(results)
+    scores = cross_validate(svd, data, measures=["RMSE", "MAE"], cv=5)
+    for score in scores['test_rmse']:
+        print(score)
+        if score > 0.88:
+            return False
+    return True
 
 
 def main():
@@ -121,8 +125,12 @@ def main():
     # )
 
     data = get_ratings_data(ratings_data)
-    svd_model = grid_search_cross_vali_svd(data)
-    train(svd_model, data)
+    # svd_model = grid_search_cross_vali_svd(data)
+    svd_model = SVD(n_factors=10, n_epochs=100, biased=True)
+    print('training')
+    if not train_and_validate(svd_model, data):
+        print("not good enough")
+        return
 
     # Apply a rating of 4 to all interactions (only to match the Surprise dataset format)
     prediction_data = utility.import_data('resources/predictions.csv', ';')
