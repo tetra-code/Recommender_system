@@ -121,7 +121,7 @@ def rand_search_cross_vali_svd(data):
 
 def train_and_validate(svd, data) -> bool:
     # Train the algorithm on the training set
-    train_set, _ = train_test_split(data, test_size=.20)
+    train_set, _ = train_test_split(data, test_size=.01)
     svd.fit(train_set)
     print('training done')
 
@@ -143,16 +143,16 @@ def main():
     )
 
     data = get_ratings_data(ratings_data)
-    svd_model = rand_search_cross_vali_svd(data)
-    # svd_model = SVD(n_factors=10, n_epochs=100, biased=True)
+    # svd_model = rand_search_cross_vali_svd(data)
+    svd_model = SVD(n_factors=10, n_epochs=50, biased=True)
     print('training')
     if not train_and_validate(svd_model, data):
         print("not good enough")
         return
 
-    # Apply a rating of 4 to all interactions (only to match the Surprise dataset format)
+    # Apply a rating of 0 to all interactions (only to match the Surprise dataset format)
     prediction_data = utility.import_data('resources/predictions.csv', ';')
-    test_set = [[ int(row[0]), int(row[1]), 4] for i, row in enumerate(prediction_data)]
+    test_set = [[ int(row[0]), int(row[1]), 0 ] for i, row in enumerate(prediction_data)]
 
     # list of Prediction instance
     predictions = svd_model.test(test_set)
