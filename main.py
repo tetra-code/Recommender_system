@@ -81,8 +81,8 @@ def grid_search_cross_vali_svd(data):
     # List of n factors and epochs to choose from
     print("Starting grid search")
     param_grid = {
-        'n_factors': [3, 10, 20, 30, 40, 50],
-        'n_epochs': [100, 150],
+        'n_factors': [20, 50, 100],
+        'n_epochs': [10, 20, 50],
     }
     gs = GridSearchCV(SVDpp, param_grid, measures=['RMSE', 'MAE'], cv=10)
     gs.fit(data)
@@ -93,8 +93,7 @@ def grid_search_cross_vali_svd(data):
     best_factor = gs.best_params['rmse']['n_factors']
     best_epoch = gs.best_params['rmse']['n_epochs']
 
-    svd = SVDpp(n_factors=best_factor, n_epochs=best_epoch)
-    return svd
+    return SVD(n_factors=best_factor, n_epochs=best_epoch)
 
 
 def train_and_validate(svd, data) -> bool:
@@ -118,15 +117,10 @@ def main():
         sep=';',
         names=['user_idx', 'movie_idx', 'rating'],
     )
-    # user_metadata = pd.read_csv(
-    #     'resources/users.csv',
-    #     sep=';',
-    #     names=['user_idx', 'sex', 'age', 'profession'],
-    # )
 
     data = get_ratings_data(ratings_data)
-    # svd_model = grid_search_cross_vali_svd(data)
-    svd_model = SVD(n_factors=10, n_epochs=100, biased=True)
+    svd_model = grid_search_cross_vali_svd(data)
+    # svd_model = SVD(n_factors=10, n_epochs=100, biased=True)
     print('training')
     if not train_and_validate(svd_model, data):
         print("not good enough")
